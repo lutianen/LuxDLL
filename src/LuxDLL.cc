@@ -12,13 +12,21 @@
 
 #include "LuxDLL.h"
 
+#include <cmath>
 #include <cstring>  /// memcpy
 #include <functional>
 #include <iostream> /// fflush stdout
 #include <fstream>
-#include <opencv2/highgui.hpp>
+#include <ostream>
 #include <stdio.h>
 
+
+
+template <typename T>
+inline unsigned char
+LuxBound255(T src){
+    return static_cast<unsigned>( src > 255 ? 255 : src);
+}
 
 
 /// @brief Swap endian data in pData
@@ -784,12 +792,6 @@ LuxAdjustBrightness(unsigned char *src,
         return -1;
     }
 
-    if (std::abs(beta) > 10)
-    {
-        perror("Beta is supported with ranging from -10 to 10!!!");
-        return -1;
-    }
-
     if (channel == 1)
     {
         cv::Mat img_src(width, height, CV_8UC1, src);
@@ -931,9 +933,11 @@ LuxAdjustContrast(unsigned char *src,
  * @param inputFileName_ 
  * @param width 
  * @param height 
- * @param imReadType 
- * @param histImgWidth 
- * @param histImgHeight 
+ * @param imReadType {0, 1}
+ *	- 0: Gray image.
+ *	- 1: RGB image.
+ * @param histImgWidth TypeValue: 256
+ * @param histImgHeight TypeValue: 256
  * @param outFileName 
  * @return long long int 
  */
@@ -1765,12 +1769,12 @@ LuxLoadImageDataFromFileStretchTo16(const char *inputFileName,
  * @param bpp (bits per pixel) Only support 8, 12, 16
  * @param highZero high 4-bit data (0000AAAA AAAAAAAA 0000BBBB BBBBBBBB) is zero ?
  * @param outputImg The pointor of image data in memory after parsing.
- * @param mode 
- * 0 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P0P1P2P3P4P5P6P7 Q0Q1Q2Q3Q4Q5Q6Q7
- * 1 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P1P2P3P4P5P6P7P8 Q1Q2Q3Q4Q5Q6Q7Q8
- * 2 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P2P3P4P5P6P7P8P9 Q2Q3Q4Q5Q6Q7Q8Q9
- * 3 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P3P4P5P6P7P8P9Pa Q3Q4Q5Q6Q7Q8Q9Qa
- * 4 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P4P5P6P7P8P9PaPb Q4Q5Q6Q7Q8Q9QaQb
+ * @param mode {0, 1, 2, 3, 4}
+ *  - 0: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P0P1P2P3P4P5P6P7 Q0Q1Q2Q3Q4Q5Q6Q7
+ *  - 1: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P1P2P3P4P5P6P7P8 Q1Q2Q3Q4Q5Q6Q7Q8
+ *  - 2: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P2P3P4P5P6P7P8P9 Q2Q3Q4Q5Q6Q7Q8Q9
+ *  - 3: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P3P4P5P6P7P8P9Pa Q3Q4Q5Q6Q7Q8Q9Qa
+ *  - 4: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P4P5P6P7P8P9PaPb Q4Q5Q6Q7Q8Q9QaQb
  * @return long long. The number of image bytes
  */
 inline long long
@@ -2474,6 +2478,701 @@ LuxLoadImageDataFromFileEnhanced(const char *inputFileName,
                                     outData, isBigEndian, highZero, 
                                     mode,
                                     code);
+
+    /// k > 0 is ok
+    if (k > 0)
+    {
+        // For display
+        unsigned long long _ret = LuxWriteImageIntoFile(outData, 
+            outputRawFileName, ImageFileType::raw, k, width, height, cvType);
+
+        // TIFF
+        if (saveTiff)
+            LuxWriteImageIntoFile(outData, outputTiffFileName, 
+                    ImageFileType::tiff, k, width, height, cvType);
+
+        delete[] imgData;
+        delete[] outData;
+        return _ret;
+    }
+    else
+    {
+        delete[] imgData;
+        delete[] outData;
+        return k;
+    }
+
+    return -5;
+}
+
+
+/**
+ * @brief Get G1/G2/R/B data into @c G1Dst / @c G2Dst / @c RDst / @c BDst from 8-bit Byaer raw image.
+ * 
+ * @param src 8-bit Bayer raw image 
+ * @param width width 
+ * @param height height 
+ * @param bayerMode {0, 1, 2, 3}
+ *  - 0: GBRG
+ *  - 1: GRBG
+ *  - 2: BGGR
+ *  - 3: RGGB
+ * @param RDst Red channel data
+ * @param G1Dst Green1 channel data
+ * @param G2Dst Green2 channel data
+ * @param BDst Blue channel data
+ * @return 0 if success else < 0
+ */
+int
+LuxGetBayerRawChanenls(unsigned char* src, 
+                    int width,
+                    int height,
+                    int bayerMode,
+                    unsigned char* RDst,
+                    unsigned char* G1Dst,
+                    unsigned char* G2Dst,
+                    unsigned char* BDst)
+{
+    if (nullptr == src) {
+        std::cerr << "Input image(src) is nullptr" << std::endl;
+        return -1;
+    }
+
+    if (width < 0 || height < 0) {
+        std::cerr << "Width or Height < 0" << std::endl;
+        return -2;
+    }
+
+    if (bayerMode != 0 && bayerMode != 1 && bayerMode != 2 && bayerMode != 3) {
+        std::cerr << "bayerMode selection is wrong. Support is [0, 1, 2, 3]\n"
+            "* 0: GBRG\n"
+            "* 1: GRBG\n"
+            "* 2: BGGR\n"
+            "* 3: RGGB" << std::endl;
+
+        return -3;
+    }
+
+    int row, col;
+    unsigned int runCount = width * height;
+    int step = 2;
+    int iOff = 0;
+
+    // Seclect byaer mode
+    switch (bayerMode) {
+
+        // GBRG
+        case 0 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    G1Dst[iOff] = src[rPtr];
+                    BDst[iOff] = src[rPtr + 1];
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    RDst[iOff] =src[rPtr];
+                    G2Dst[iOff] = src[rPtr+1];
+                }
+            }
+            break;
+        }
+
+        // GRBG
+        case 1 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    G1Dst[iOff] = src[rPtr];
+                    RDst[iOff] = src[rPtr+1];
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    BDst[iOff] = src[rPtr];
+                    G2Dst[iOff] = src[rPtr+1];
+                }
+            }
+            break;
+        }
+
+        // BGGR
+        case 2 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    BDst[iOff] = src[rPtr];
+                    G1Dst[iOff] = src[rPtr+1];
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    G2Dst[iOff] = src[rPtr];
+                    RDst[iOff] = src[rPtr+1];
+                }
+            }
+            break;
+        }
+
+        // RGGB
+        case 3 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    RDst[iOff] = src[rPtr];
+                    G1Dst[iOff] = src[rPtr+1];
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    iOff = row * (width / 2) + col;
+                    G2Dst[iOff] = src[rPtr];
+                    BDst[iOff] = src[rPtr+1];
+                }
+            }
+            break;
+        }
+    }
+
+    return 0;
+}
+
+
+
+/**
+ * @brief Set R/G/B channel factor, with only 8-bit raw bayer.
+ * 
+ * @param src 8-bit raw bayer
+ * @param width The width of bayer image. 
+ * @param height The width of bayer image. 
+ * @param mode The type of bayer {0, 1, 2, 3}. 
+ *  - GBRG 0
+ *  - GRBG 1
+ *  - BGGR 2
+ *  - RGGB 3
+ * @param r [0, 10]
+ * @param g [0, 10]
+ * @param b [0, 10]
+ * @return #bytes of bayer image.
+ */
+long long
+LuxSetChannelFactors(unsigned char* src,
+                    int width,
+                    int height,
+                    int mode,
+                    float r,
+                    float g,
+                    float b)
+{
+    if (nullptr == src) {
+        std::cerr << "Input image(src) is nullptr" << std::endl;
+        return -1;
+    }
+
+    if (width < 0 || height < 0) {
+        std::cerr << "Width or Height < 0" << std::endl;
+        return -2;
+    }
+
+    if (mode != 0 && mode != 1 && mode != 2 && mode != 3) {
+        std::cerr << "Mode selection is wrong. Support is [0, 1, 2, 3]\n"
+            "* 0: GBRG\n"
+            "* 1: GRBG\n"
+            "* 2: BGGR\n"
+            "* 3: RGGB" << std::endl;
+
+        return -3;
+    }
+
+    if (std::abs(r) > 10 || std::abs(g) > 10 || std::abs(b) >10) {
+        std::cerr << "The factors(r/g/b) is wrong. It should be in [0, 10]." << std::endl;
+        return -4;
+    }
+
+    int row, col;
+    unsigned int runCount = width * height;
+    int step = 2;
+    int k = 0;
+
+    // Seclect byaer mode
+    switch (mode) {
+
+        // GBRG
+        case 0 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * g);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr + 1] * b);
+                    k++;
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * r);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * g);
+                    k++;
+                }
+            }
+            break;
+        }
+
+        // GRBG
+        case 1 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * g);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * r);
+                    k++;
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * b);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * g);
+                    k++;
+                }
+            }
+            break;
+        }
+
+        // BGGR
+        case 2 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * b);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * g);
+                    k++;
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * g);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * r);
+                    k++;
+                }
+            }
+            break;
+        }
+
+        // RGGB
+        case 3 :{
+            for (unsigned int rPtr = 0; rPtr < runCount; rPtr += step) {
+                row = (rPtr * 2 / step) / width;
+                col = (rPtr * 2 / step) - width * row;
+
+                // Even
+                if (row % 2 == 0) {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * r);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * g);
+                    k++;
+                // Odd
+                } else {
+                    row = row / 2;
+                    col = col / 2;
+                    // iOff = row * (width / 2) + col;
+                    src[rPtr] = LuxBound255<float>(src[rPtr] * g);
+                    src[rPtr + 1] = LuxBound255<float>(src[rPtr+1] * b);
+                    k++;
+                }
+            }
+            break;
+        }
+    }
+
+    // Bytes
+    return k;
+}
+
+
+
+/**
+ * @brief Load image data from memory
+ * @note When Python Call the Function, the ALL parameters must be SET.
+ * @param imgData The poniter of image data in memory before parsing.
+ * @param length The bytes number of image data in memory.
+ * @param dataFormat 1: raw, 2: bayer, 3: others
+ * @param width Width
+ * @param height Height 
+ * @param bpp (Bits Per Pixel)  8, 12, 16
+ * @param inChannels inChannels
+ * @param outData The poniter of image data in memory after parsing.
+ * @param isBigEndian Big Endian(be) ? 
+ * @param highZero 0000AAAA AAAAAAAA ?
+ * @param mode [0, 1, 2, 3, 4]
+ * 0 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P0P1P2P3P4P5P6P7 Q0Q1Q2Q3Q4Q5Q6Q7
+ * 1 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P1P2P3P4P5P6P7P8 Q1Q2Q3Q4Q5Q6Q7Q8
+ * 2 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P2P3P4P5P6P7P8P9 Q2Q3Q4Q5Q6Q7Q8Q9
+ * 3 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P3P4P5P6P7P8P9Pa Q3Q4Q5Q6Q7Q8Q9Qa
+ * 4 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P4P5P6P7P8P9PaPb Q4Q5Q6Q7Q8Q9QaQb
+ * @param code  
+ *  - CV_BayerBG2BGR =46,
+ *  - CV_BayerGB2BGR =47,
+ *  - CV_BayerRG2BGR =48,
+ *  - CV_BayerGR2BGR =49,
+ *  - CV_BayerBG2RGB =CV_BayerRG2BGR = 48,
+ *  - CV_BayerGB2RGB =CV_BayerGR2BGR = 49,
+ *  - CV_BayerRG2RGB =CV_BayerBG2BGR = 46,
+ *  - CV_BayerGR2RGB =CV_BayerGB2BGR = 47,
+ *  - CV_BayerRG2GRAY = 88
+ *  - CV_BayerBG2GRAY = 86,
+ *  - CV_BayerGB2GRAY = 87,
+ *  - CV_BayerRG2GRAY = 88,
+ *  - CV_BayerGR2GRAY = 89
+ * @param eaf Enable Adjust Factors
+ * @param bayerType The type of bayer {0, 1, 2, 3}. 
+ *  - GBRG 0
+ *  - GRBG 1
+ *  - BGGR 2
+ *  - RGGB 3
+ * @param r [0, 10]
+ * @param g [0, 10]
+ * @param b [0, 10]
+ * @return long long 
+ * The bytes number of image file if success. 
+ *  -1 : Data Format Don't Supported.
+ *  -2 : Bits per pixel Don't Supported.
+ *  -4 : width or height or bpp or channel are wrong.
+ *  -5 : It is not reached.
+ */
+long long
+LuxLoadImageDataEnhanced2(unsigned char *imgData,
+                 unsigned long long length,
+                 int dataFormat,
+                 int width,
+                 int height,
+                 int bpp,
+                 int inChannels,
+                 unsigned char *outData,
+                 bool isBigEndian,
+                 bool highZero,
+                 int mode,
+                 int code,
+                 bool eaf,
+                 int bayerType,
+                 float r,
+                 float g,
+                 float b)
+{
+    if (dataFormat != 1 && dataFormat != 2 && dataFormat != 3) {
+        std::cerr << "Data Format Don't Supported!!! \n"
+                  << "1: raw, 2: bayer, 3: others"
+                  << std::endl;
+        ::fflush(stderr);
+        return -1;
+    }
+
+    float bytes = 0.0;
+    switch (bpp) {
+        case 8:
+            bytes = 1;
+            break;
+            
+        case 12:
+            if (!highZero)
+            {
+                bytes = 1.5;
+                break;
+            }
+
+            break;
+        case 16:
+            bytes = 2;
+            break;
+
+        default:
+            std::cerr << "bpp Don't Supported!!! \n"
+                    << "Supported depth of bits: 8, 12, 16"
+                    << std::endl;
+            ::fflush(stderr);
+            return -2;
+    }
+
+    if (length != static_cast<unsigned long long>(
+            static_cast<float>(width * height * inChannels) * bytes)) {
+        std::cerr << "width or height or bpp or channel are wrong!!!"
+            << "\nwidth: " << width
+            << "\nheigth: " << height
+            << "\nbits per pixel: " << bpp
+            << "\ninChannels: " << inChannels
+            << std::endl;
+        ::fflush(stderr);
+        return -4;
+    }
+
+    // Only support big endian
+    if (!isBigEndian) {
+        LuxEndianRevert(imgData, length, bpp, imgData, true);
+    }
+
+    /// bind mode
+    auto parseImage = std::bind(&LuxParseImageEnhanced, 
+                std::placeholders::_1, 
+                std::placeholders::_2, 
+                std::placeholders::_3, 
+                std::placeholders::_4,
+                std::placeholders::_5,
+                mode);
+
+    // TODO 代码优化： 加入 outChannels/types
+    /* raw */
+    if (dataFormat == 1) {
+        long long validLength = width * height;
+        auto* temp = new unsigned char[validLength];
+        // uint64_t k = LuxParseImage(imgData, length, bpp, highZero, temp);
+        uint64_t k = parseImage(imgData, length, bpp, highZero, temp);
+        (void)k;
+        
+        // Adjust r/g/b
+        if (eaf){
+            std::cout << 
+                "With DataFormat = 1, Adjust R/G/B Factors is not supported. Please SET \"eaf\" TO \"false\"." 
+                << std::endl;
+            std::cout << "Please Consider to use \"LuxAdjustBrightness()\"." << std::endl;
+        }
+
+        cv::Mat bayer8BitMat(height, width, CV_8UC1, temp);
+        cv::Mat outputImg(height, width, CV_8UC1, outData);
+        cv::cvtColor(bayer8BitMat, outputImg, code);
+
+        delete[] temp;
+        /* 图片大小 （字节数） */
+        return outputImg.size().width * outputImg.size().height * outputImg.channels();
+    }
+
+    /* Bayer */
+    else if (dataFormat == 2) {
+        int outChannels = 3;
+        long long validLength = width * height * outChannels;
+        auto* temp = new unsigned char[validLength];
+        // uint64_t k = LuxParseImage(imgData, length, bpp, highZero, temp);
+        uint64_t k = parseImage(imgData, length, bpp, highZero, temp);
+        
+        // Adjust r/g/b 
+        if (eaf)
+            k = LuxSetChannelFactors(temp, width, height, bayerType, r, g, b);
+        else
+            (void)k;
+
+        /// 16UC1 Bayer
+        cv::Mat bayer8BitMat(height, width, CV_8UC1, temp);
+        cv::Mat rgb8BitMat(height, width, CV_8UC3, outData);
+        cv::cvtColor(bayer8BitMat, rgb8BitMat, code);
+        
+        // cv::imshow("LuxTW2", rgb8BitMat);
+        // cv::waitKey();
+
+        delete[] temp;
+        return rgb8BitMat.size().height * rgb8BitMat.size().width * rgb8BitMat.channels();
+    }
+
+    return -5;
+}
+
+
+/**
+ * @brief Load image data from file.
+ * @note When Python Call the Function, the ALL parameters must be SET.
+ * @param inputFileName The file before parsing.
+ * @param dataFormat 1: raw, 2: bayer, 3: others
+ * @param width Width
+ * @param height Height 
+ * @param bpp bpp(Bits Per Pixel)  8, 12, 16
+ * @param channels Channels
+ * @param outputRawFileName The .raw file after parsing.
+ * @param outputTiffFileName The .tiff file after parsing.
+ * @param isBigEndian Big Endian(be) ? 
+ * @param highZero 0000AAAA AAAAAAAA ?
+ * @param saveTiff Save tiff ?
+ * @param mode [0, 1, 2, 3, 4]
+ * 0 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P0P1P2P3P4P5P6P7 Q0Q1Q2Q3Q4Q5Q6Q7
+ * 1 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P1P2P3P4P5P6P7P8 Q1Q2Q3Q4Q5Q6Q7Q8
+ * 2 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P2P3P4P5P6P7P8P9 Q2Q3Q4Q5Q6Q7Q8Q9
+ * 3 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P3P4P5P6P7P8P9Pa Q3Q4Q5Q6Q7Q8Q9Qa
+ * 4 - P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P4P5P6P7P8P9PaPb Q4Q5Q6Q7Q8Q9QaQb
+ * @param code 
+ *  - CV_BayerBG2BGR =46,
+ *  - CV_BayerGB2BGR =47,
+ *  - CV_BayerRG2BGR =48,
+ *  - CV_BayerGR2BGR =49,
+ *  - CV_BayerBG2RGB =CV_BayerRG2BGR = 48,
+ *  - CV_BayerGB2RGB =CV_BayerGR2BGR = 49,
+ *  - CV_BayerRG2RGB =CV_BayerBG2BGR = 46,
+ *  - CV_BayerGR2RGB =CV_BayerGB2BGR = 47,
+ *  - CV_BayerRG2GRAY = 88
+ *  - CV_BayerBG2GRAY = 86,
+ *  - CV_BayerGB2GRAY = 87,
+ *  - CV_BayerRG2GRAY = 88,
+ *  - CV_BayerGR2GRAY = 89
+ * @param eaf Enable Adjust Factors
+ * @param bayerType The type of bayer {0, 1, 2, 3}. 
+ *  - GBRG 0
+ *  - GRBG 1
+ *  - BGGR 2
+ *  - RGGB 3
+ * @param r [0, 10]
+ * @param g [0, 10]
+ * @param b [0, 10] *
+ * 
+ * @return long long 
+ * The bytes number of image file if success. 
+ *  -1 : Data Format Don't Supported.
+ *  -2 : Bits per pixel Don't Supported.
+ *  -3 : File open failed.
+ *  -4 : width or height or bpp or channel are wrong.
+ *  -5 : It is not reached.
+ */
+long long
+LuxLoadImageDataFromFileEnhanced2(const char *inputFileName,
+                 int dataFormat,
+                 int width,
+                 int height,
+                 int bpp,
+                 int channels,
+                 const char *outputRawFileName,
+                 const char *outputTiffFileName,
+                 bool isBigEndian,
+                 bool highZero,
+                 bool saveTiff,
+                 int mode,
+                 int code,
+                 bool eaf,
+                 int bayerType,
+                 float r,
+                 float g,
+                 float b)
+{
+    if (dataFormat != 1 && dataFormat != 2 && dataFormat != 3) {
+        std::cerr << "Data Format Don't Supported!!! \n"
+                  << "1: raw, 2: bayer, 3: others"
+                  << std::endl;
+        ::fflush(stderr);
+        return -1;
+    }
+
+    float bytes = 0.0;
+    switch (bpp) {
+        case 8:
+            bytes = 1;
+            break;
+        case 12:
+            if (!highZero)
+            {
+                bytes = 1.5;
+                break;
+            }
+
+            break;
+        case 16:
+            bytes = 2;
+            break;
+        default:
+            std::cerr << "bpp Don't Supported!!! \n"
+                    << "Supported depth of bits: 8, 12, 16"
+                    << std::endl;
+            ::fflush(stderr);
+            return -2;
+    }
+
+    std::ifstream ifstrm(reinterpret_cast<const char*>(inputFileName), std::ios_base::binary);
+    if (ifstrm.is_open() == false) {
+        std::cerr << "Fail to read " << inputFileName << std::endl;
+        ::fflush(stderr);
+        return -3;
+    }
+
+    /// Check the length of file
+    unsigned long long length = static_cast<unsigned long long int>(
+        static_cast<float>(width * height * channels) * bytes);
+    ifstrm.seekg(0, ifstrm.end);
+    unsigned long long ret = ifstrm.tellg();
+    ifstrm.seekg(0, ifstrm.beg);
+    if (ret != length) {
+        std::cerr << "The length of file is NOT right." << std::endl;
+        ::fflush(stderr);
+        return -4;
+    }
+
+    /// Read bytes into imgData
+    auto* imgData = new unsigned char[length];
+    ifstrm.read((char *)imgData, length);
+
+    /// According to the target, Set channels, Type of outputFile
+    unsigned char *outData = nullptr;
+    int cvType = CV_8UC1;
+    /// raw
+    if (dataFormat == 1)
+    {
+        outData = new unsigned char[width * height * 1];
+        cvType = CV_8UC1;
+    }
+    /// Bayer / others
+    else
+    {
+        outData = new unsigned char[width * height * 3];
+        cvType = CV_8UC3;
+    }
+
+    // unsigned long long k = LuxLoadImageData(imgData, length, dataFormat, width, height, bpp, channels, outData, isBigEndian, highZero, code);
+    long long k = LuxLoadImageDataEnhanced2(imgData, length, dataFormat, 
+                                    width, height, bpp, channels, 
+                                    outData, isBigEndian, highZero, 
+                                    mode,
+                                    code, eaf, bayerType, r, g, b);
 
     /// k > 0 is ok
     if (k > 0)

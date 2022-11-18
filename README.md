@@ -9,3 +9,8 @@ The DLL project is for TW2/CE7.
 - CMake >= 3.20.6
 - OpenCV 3.14.6
 - Python 3.8 64 bit
+
+## Log
+
+- [x] v2.4
+  Add set R/G/B factors Function

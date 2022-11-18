@@ -12,6 +12,7 @@
 
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
 #include <cstdint>
 
 
@@ -256,7 +257,68 @@ LuxLoadImageDataFromFileEnhanced(const char *inputFileName,
                  int mode,
                  int code = CV_BayerRG2RGB);
 
+DLLEXPORT
+int
+LuxGetBayerRawChanenls(unsigned char* src, 
+                    int width,
+                    int height,
+                    int bayerMode,
+                    unsigned char* RDst,
+                    unsigned char* G1Dst,
+                    unsigned char* G2Dst,
+                    unsigned char* BDst);
 
+DLLEXPORT
+long long
+LuxSetChannelFactors(unsigned char* src,
+                    int width,
+                    int height,
+                    int mode,
+                    float r,
+                    float g,
+                    float b);
+
+
+DLLEXPORT
+long long
+LuxLoadImageDataFromFileEnhanced2(const char *inputFileName,
+                 int dataFormat,
+                 int width,
+                 int height,
+                 int bpp,
+                 int channels,
+                 const char *outputRawFileName,
+                 const char *outputTiffFileName,
+                 bool isBigEndian,
+                 bool highZero,
+                 bool saveTiff,
+                 int mode,
+                 int code,
+                 bool eaf,
+                 int bayerType,
+                 float r,
+                 float g,
+                 float b);
+
+DLLEXPORT
+long long
+LuxLoadImageDataEnhanced2(unsigned char *imgData,
+                 unsigned long long length,
+                 int dataFormat,
+                 int width,
+                 int height,
+                 int bpp,
+                 int inChannels,
+                 unsigned char *outData,
+                 bool isBigEndian,
+                 bool highZero,
+                 int mode,
+                 int code,
+                 bool eaf,
+                 int bayerType,
+                 float r,
+                 float g,
+                 float b);
 
 #ifdef __cplusplus
 }
