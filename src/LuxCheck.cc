@@ -28,12 +28,14 @@ uint8_t LuxCRC4_itu(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;                // Initial value
     while (length--) {
-        crc ^= *data++;                 // crc ^= *data; data++;
+        // crc ^= *data++;                 // crc ^= *data; data++;
+        crc ^= *data;
+        data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x0C;// 0x0C = (reverse 0x03)>>(8-4)
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0x0C);// 0x0C = (reverse 0x03)>>(8-4)
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint8_t>((crc >> 1));
         }
     }
     return crc;
@@ -52,15 +54,17 @@ uint8_t LuxCRC5_epc(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0x48;        // Initial value: 0x48 = 0x09<<(8-5)
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        // crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; i++) {
             if (crc & 0x80)
-                crc = (crc << 1) ^ 0x48;        // 0x48 = 0x09<<(8-5)
+                crc = static_cast<uint8_t>((crc << 1) ^ 0x48);        // 0x48 = 0x09<<(8-5)
             else
-                crc <<= 1;
+                // crc <<= 1;
+                crc = static_cast<uint8_t>(crc << 1);
         }
     }
-    return crc >> 3;
+    return static_cast<uint8_t>(crc >> 3);
 }
 
 /******************************************************************************
@@ -76,12 +80,12 @@ uint8_t LuxCRC5_itu(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;                // Initial value
     while (length--) {
-        crc ^= *data++;                 // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x15;// 0x15 = (reverse 0x15)>>(8-5)
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0x15);// 0x15 = (reverse 0x15)>>(8-5)
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint8_t>(crc >> 1);
         }
     }
     return crc;
@@ -100,12 +104,12 @@ uint8_t LuxCRC5_usb(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0x1F;                // Initial value
     while (length--) {
-        crc ^= *data++;                 // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x14;// 0x14 = (reverse 0x05)>>(8-5)
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0x14);// 0x14 = (reverse 0x05)>>(8-5)
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint8_t>((crc >> 1));
         }
     }
     return crc ^ 0x1F;
@@ -124,12 +128,12 @@ uint8_t LuxCRC6_itu(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;         // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x30;// 0x30 = (reverse 0x03)>>(8-6)
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0x30);// 0x30 = (reverse 0x03)>>(8-6)
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint8_t>((crc >> 1));
         }
     }
     return crc;
@@ -148,15 +152,16 @@ uint8_t LuxCRC7_mmc(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; i++) {
             if (crc & 0x80)
-                crc = (crc << 1) ^ 0x12;        // 0x12 = 0x09<<(8-7)
+                crc = static_cast<uint8_t>((crc << 1) ^ 0x12);        // 0x12 = 0x09<<(8-7)
             else
-                crc <<= 1;
+                // crc <<= 1;
+                crc = static_cast<uint8_t>(crc << 1);
         }
     }
-    return crc >> 1;
+    return static_cast<uint8_t>(crc >> 1);
 }
 
 /******************************************************************************
@@ -172,12 +177,12 @@ uint8_t LuxCRC8(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; i++) {
             if (crc & 0x80)
-                crc = (crc << 1) ^ 0x07;
+                crc = static_cast<uint8_t>((crc << 1) ^ 0x07);
             else
-                crc <<= 1;
+                crc = static_cast<uint8_t>( crc << 1);
         }
     }
     return crc;
@@ -196,12 +201,12 @@ uint8_t LuxCRC8_itu(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; i++) {
             if (crc & 0x80)
-                crc = (crc << 1) ^ 0x07;
+                crc = static_cast<uint8_t>((crc << 1) ^ 0x07);
             else
-                crc <<= 1;
+                crc = static_cast<uint8_t>(crc << 1);
         }
     }
     return crc ^ 0x55;
@@ -220,12 +225,12 @@ uint8_t LuxCRC8_rohc(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0xFF;         // Initial value
     while (length--) {
-        crc ^= *data++;            // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xE0;        // 0xE0 = reverse 0x07
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0xE0);        // 0xE0 = reverse 0x07
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint8_t>(crc >> 1);
         }
     }
     return crc;
@@ -245,12 +250,12 @@ uint8_t LuxCRC8_maxim(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint8_t crc = 0;         // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc ^= *data; data++;
         for (i = 0; i < 8; i++) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x8C;        // 0x8C = reverse 0x31
+                crc = static_cast<uint8_t>((crc >> 1) ^ 0x8C);        // 0x8C = reverse 0x31
             else
-                crc >>= 1;
+                crc = static_cast<uint8_t>(crc >> 1);
         }
     }
     return crc;
@@ -269,12 +274,12 @@ uint16_t LuxCRC16_ibm(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xA001;        // 0xA001 = reverse 0x8005
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0xA001);        // 0xA001 = reverse 0x8005
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
     return crc;
@@ -293,15 +298,15 @@ uint16_t LuxCRC16_maxim(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xA001;        // 0xA001 = reverse 0x8005
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0xA001);        // 0xA001 = reverse 0x8005
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
-    return ~crc;    // crc^0xffff
+    return static_cast<uint16_t>(~crc);    // crc^0xffff
 }
 
 /******************************************************************************
@@ -317,15 +322,15 @@ uint16_t LuxCRC16_usb(uint8_t* data, uint16_t length){
     uint8_t i;
     uint16_t crc = 0xffff;        // Initial value
     while (length--) {
-        crc ^= *data++;            // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xA001;        // 0xA001 = reverse 0x8005
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0xA001);        // 0xA001 = reverse 0x8005
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
-    return ~crc;    // crc^0xffff
+    return static_cast<uint16_t>(~crc);    // crc^0xffff
 }
 
 /******************************************************************************
@@ -341,12 +346,12 @@ uint16_t LuxCRC16_modbus(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0xffff;        // Initial value
     while (length--) {
-        crc ^= *data++;            // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xA001;        // 0xA001 = reverse 0x8005
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0xA001);        // 0xA001 = reverse 0x8005
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
     return crc;
@@ -365,12 +370,12 @@ uint16_t LuxCRC16_ccitt(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0;        // Initial value
     while (length--) {
-        crc ^= *data++;        // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x8408;        // 0x8408 = reverse 0x1021
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0x8408);        // 0x8408 = reverse 0x1021
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
     return crc;
@@ -389,12 +394,13 @@ uint16_t LuxCRC16_ccitt_false(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0xffff;        //Initial value
     while (length--) {
-        crc ^= (uint16_t)(*data++) << 8; // crc ^= (uint6_t)(*data)<<8; data++;
+        // crc ^= static_cast<uint16_t>(*data++) << 8; // crc ^= (uint6_t)(*data)<<8; data++;
+        crc = static_cast<uint16_t>(crc ^ static_cast<uint16_t>((*data)<<8)); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 0x8000)
-                crc = (crc << 1) ^ 0x1021;
+                crc = static_cast<uint16_t>((crc << 1) ^ 0x1021);
             else
-                crc <<= 1;
+                crc = static_cast<uint16_t>(crc <<1);
         }
     }
     return crc;
@@ -413,15 +419,15 @@ uint16_t LuxCRC16_x25(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0xffff;        // Initial value
     while (length--) {
-        crc ^= *data++;            // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0x8408;        // 0x8408 = reverse 0x1021
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0x8408);        // 0x8408 = reverse 0x1021
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
-    return ~crc;                // crc^Xorout
+    return static_cast<uint16_t>(~crc);                // crc^Xorout
 }
 
 /******************************************************************************
@@ -437,12 +443,12 @@ uint16_t LuxCRC16_xmodem(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0;            // Initial value
     while (length--) {
-        crc ^= (uint16_t)(*data++) << 8; // crc ^= (uint16_t)(*data)<<8; data++;
+        crc = static_cast<uint16_t>(crc ^ (static_cast<uint16_t>(*data++) << 8)); // crc ^= (uint16_t)(*data)<<8; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 0x8000)
-                crc = (crc << 1) ^ 0x1021;
+                crc = static_cast<uint16_t>((crc << 1) ^ 0x1021);
             else
-                crc <<= 1;
+                crc = static_cast<uint16_t>( crc << 1);
         }
     }
     return crc;
@@ -461,15 +467,15 @@ uint16_t LuxCRC16_dnp(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint16_t crc = 0;            // Initial value
     while (length--) {
-        crc ^= *data++;            // crc ^= *data; data++;
+        crc = static_cast<uint16_t>(crc ^ *data); data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xA6BC;        // 0xA6BC = reverse 0x3D65
+                crc = static_cast<uint16_t>((crc >> 1) ^ 0xA6BC);        // 0xA6BC = reverse 0x3D65
             else
-                crc = (crc >> 1);
+                crc = static_cast<uint16_t>((crc >> 1));
         }
     }
-    return ~crc;                // crc^Xorout
+    return static_cast<uint16_t>(~crc);                // crc^Xorout
 }
 
 /******************************************************************************
@@ -510,7 +516,7 @@ uint32_t LuxCRC32_mpeg_2(uint8_t* data, uint16_t length) {
     uint8_t i;
     uint32_t crc = 0xffffffff;  // Initial value
     while (length--) {
-        crc ^= (uint32_t)(*data++) << 24;// crc ^=(uint32_t)(*data)<<24; data++;
+        crc ^= static_cast<uint32_t>(*data++) << 24;// crc ^=(uint32_t)(*data)<<24; data++;
         for (i = 0; i < 8; ++i) {
             if (crc & 0x80000000)
                 crc = (crc << 1) ^ 0x04C11DB7;

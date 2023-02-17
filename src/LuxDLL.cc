@@ -20,6 +20,7 @@
 #include <ostream>
 #include <stdio.h>
 
+#include <tuple>
 
 
 template <typename T>
@@ -1775,6 +1776,7 @@ LuxLoadImageDataFromFileStretchTo16(const char *inputFileName,
  *  - 2: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P2P3P4P5P6P7P8P9 Q2Q3Q4Q5Q6Q7Q8Q9
  *  - 3: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P3P4P5P6P7P8P9Pa Q3Q4Q5Q6Q7Q8Q9Qa
  *  - 4: P0P1P2P3P4P5P6P7 P8P9PaPbQ0Q1Q2Q3 Q4Q5Q6Q7Q8Q9QaQb -> P4P5P6P7P8P9PaPb Q4Q5Q6Q7Q8Q9QaQb
+ *  - 5: all in 8
  * @return long long. The number of image bytes
  */
 inline long long
@@ -1791,9 +1793,9 @@ LuxParseImageEnhanced(unsigned char *orgiImg,
         return -1;
     }
     
-    if (mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4) {
+    if (mode != 0 && mode != 1 && mode != 2 && mode != 3 && mode != 4 && mode != 5) {
         std::cerr << "Mode don't support. \n"
-                    << "Mode must be in [0, 1, 2, 3, 4]"
+                    << "Mode must be in [0, 1, 2, 3, 4, 5]"
                     << std::endl;
         ::fflush(stderr);
         return -2;
@@ -2063,6 +2065,7 @@ LuxParseImageEnhanced(unsigned char *orgiImg,
                 } catch (const std::exception &e) {
                     std::cerr << e.what() << '\n';
                     ::fflush(stderr);
+                    return 0;
                 }
             }
 
@@ -2137,6 +2140,7 @@ LuxParseImageEnhanced(unsigned char *orgiImg,
                 } catch (const std::exception &e) {
                     std::cerr << e.what() << '\n';
                     ::fflush(stderr);
+                    return 0;
                 }
             }
 
@@ -2161,6 +2165,7 @@ LuxParseImageEnhanced(unsigned char *orgiImg,
                 } catch (const std::exception &e) {
                     std::cerr << e.what() << '\n';
                     ::fflush(stderr);
+                    return 0;
                 }
             }
 
@@ -2168,6 +2173,86 @@ LuxParseImageEnhanced(unsigned char *orgiImg,
                 std::cerr << "It is never reached." << std::endl;
                 ::fflush(stderr);
                 return -1;
+        }
+        break;
+    }
+
+    case 5:{
+        switch (bpp) {
+            case 8:{
+                    try {
+                        ::memcpy(outputImg, orgiImg, length);
+                        return length;
+                    } catch (const std::exception &e) {
+                        std::cerr << e.what() << '\n';
+                        ::fflush(stderr);
+                        return 0;
+                    }
+                }
+
+            
+            case 12: {
+                try {
+                    /// 0000AAAA AAAAAAAA 0000BBBB BBBBBBBB
+                    if (highZero) {
+                        int newLen = length / 2;
+                        k = LuxNormalize<uint16_t, uint8_t>(reinterpret_cast<uint16_t*>(orgiImg), 
+                                newLen, 
+                                outputImg);
+                        
+
+                        // auto max = std::get<0>(LuxFindMaxMin<uint16_t>(
+                        //     reinterpret_cast<uint16_t*>(orgiImg), length / 2));
+
+                        // uint16_t* t = reinterpret_cast<uint16_t*>(orgiImg);
+                        // for(int i = 0; i < length / 2; ++i) {
+                        //     outputImg[k++] = normlize255<uint16_t, uint8_t>(t[i], max);
+                        // }
+                    }
+
+                    /// AAAAAAAA AAAABBBB BBBBBBBB
+                    else {
+                        uint64_t newLen = length / 3 * 4;
+                        auto* temp = new uint16_t[newLen];
+                        auto len = LuxParseImageExtendTo16(orgiImg, length, 12, false, temp);
+                        assert(newLen == len);
+
+                        k = LuxNormalize<uint16_t, uint8_t>(temp, newLen, outputImg);
+
+                        // auto max = std::get<0>(LuxFindMaxMin<uint16_t>(
+                        //     temp, newLen));
+
+                        // uint16_t* t = reinterpret_cast<uint16_t*>(orgiImg);
+                        // for(int i = 0; i < length / 2; ++i) {
+                        //     outputImg[k++] = normlize255<uint16_t, uint8_t>(t[i], max);
+                        // }
+                        delete [] temp;
+                    }
+                    break;
+                } catch (const std::exception &e) {
+                    std::cerr << e.what() << '\n';
+                    ::fflush(stderr);
+                }
+            }
+
+            /// 
+            case 16: {
+                try {
+                    int newLen = length / 2;
+                    k = LuxNormalize<uint16_t, uint8_t>(reinterpret_cast<uint16_t*>(orgiImg), 
+                            newLen, 
+                            outputImg);
+                    break;
+                } catch (const std::exception &e) {
+                    std::cerr << e.what() << '\n';
+                    ::fflush(stderr);
+                }
+            }
+        default:
+                std::cerr << "It is never reached." << std::endl;
+                ::fflush(stderr);
+                return -1;
+
         }
         break;
     }
@@ -2415,12 +2500,7 @@ LuxLoadImageDataFromFileEnhanced(const char *inputFileName,
             bytes = 1;
             break;
         case 12:
-            if (!highZero)
-            {
-                bytes = 1.5;
-                break;
-            }
-
+            bytes = 1.5;
             break;
         case 16:
             bytes = 2;
@@ -2447,7 +2527,9 @@ LuxLoadImageDataFromFileEnhanced(const char *inputFileName,
     unsigned long long ret = ifstrm.tellg();
     ifstrm.seekg(0, ifstrm.beg);
     if (ret != length) {
-        std::cerr << "The length of file is NOT right." << std::endl;
+        std::cerr << "The length of file is NOT right." << std::endl
+        << "width: "<< width << " height: " << height << " channels: " << channels << " bpp: " << bpp << std::endl
+        << "Target length: " << length << " File length: " << ret << std::endl;
         ::fflush(stderr);
         return -4;
     }

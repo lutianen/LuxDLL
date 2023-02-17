@@ -12,8 +12,55 @@
 
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/highgui.hpp>
 #include <cstdint>
+
+
+template <typename T>
+inline std::tuple<T, T> LuxFindMaxMin(const T* img, int length);
+
+
+template <typename TSrc, typename TDst = uint8_t>
+inline TDst normlize255(TSrc src, TSrc max);
+
+
+template <typename TSrc, typename TDst>
+inline unsigned long long LuxNormalize(TSrc* orgiImg, int orgiImgLen, TDst* outputImg);
+
+
+template <typename TSrc, typename TDst>
+inline TDst normlize255(TSrc src, TSrc max) {
+    // UINT8_MAX
+    return static_cast<TDst>((static_cast<float>(src) / max) * UINT8_MAX);
+};
+
+
+template <typename T>
+inline std::tuple<T, T> LuxFindMaxMin(const T* img, int length) {
+    T max = img[0];
+    T min = img[0];
+    for (int i = 0;  i < length; ++i) {
+        if (img[i] > max) {
+            max = img[i];
+        }
+        if (img[i] < min) {
+            min = img[i];
+        }
+    }
+
+    return std::make_tuple(max, min);
+}
+
+template <typename TSrc, typename TDst>
+inline uint64_t LuxNormalize(TSrc* orgiImg, int orgiImgLen, TDst* outputImg) {
+    uint64_t k = 0;
+    TSrc maxOfOrgiImg = std::get<0>(LuxFindMaxMin<TSrc>(orgiImg, orgiImgLen));
+
+    for(int i = 0; i < orgiImgLen; ++i) {
+        outputImg[k++] = normlize255<TSrc, TDst>(orgiImg[i], maxOfOrgiImg);
+    }
+
+    return k;
+}
 
 
 #ifdef __cplusplus
