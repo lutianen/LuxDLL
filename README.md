@@ -24,6 +24,9 @@ It has been tested and runs efficiently on Windows, not on Linux.
   Add set R/G/B factors Function
 
 - [x] v2.5
+
   Add mode: all in 8（图像拉伸显示）
+
   Change C-style to C++-style in LuxCheck.cc
+  
   Add some template function
