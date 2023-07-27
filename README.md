@@ -8,7 +8,7 @@ It has been tested and runs efficiently on Windows, not on Linux.
 
 - g++ >= 8.1.0 64 bit
 - CMake >= 3.20.6
-- OpenCV 3.14.6
+- OpenCV 4.7 [编译参数可参考 Ziwi](https://github.com/lutianen/Ziwi)
 
 ## Highlights
 

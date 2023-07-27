@@ -1,45 +1,37 @@
 /**
- * @file LuxTW2_test.cc
- * @brief 
- * 
+ * @brief
+ *
  * @version 1.0
- * @author Tianen Lu (tianenlu957@gmail.com)
+ * @author Tianen Lu (tianen.xd@gmail.com)
  * @date 2022-11
  */
 
-#include <iostream>
-#include <ostream>
+#include "../src/LuxDLL.h"
+
 #include <stdint.h>
 #include <string.h>
-#include <ctime>
 
-#include "../src/LuxDLL.h"
+#include <ctime>
+#include <fstream>
+#include <iostream>
+
 #include "../src/LuxCheck.h"
 
-
-int main( int argc, char ** argv ) {
-	auto t = clock();
+int main(int argc, char** argv) {
+    auto t = clock();
 
     std::string filename;
 
     filename = "../images/20221115222819.45.raw";
     t = clock();
-    std::cout << 
-        LuxLoadImageDataFromFileEnhanced(filename.c_str(),
-                2,
-                2560, 1920,
-                16,
-                1,
-                "../images/LuxDLL_00",
-                "../images/LuxDLL_00",
-                true,
-                true,
-                true,
-                3,
-                CV_BayerRG2RGB)
-        << std::endl
-        << "LuxLoadImageDataFromFileEnhanced cost: " 
-            << (double)(clock() - t) / CLOCKS_PER_SEC << " seconds." << std::endl;
+    std::cout << LuxLoadImageDataFromFileEnhanced(
+                     filename.c_str(), 2, 2560, 1920, 16, 1,
+                     "../images/LuxDLL_00", "../images/LuxDLL_00", true, true,
+                     true, 3, cv::COLOR_BayerRG2RGB)
+              << std::endl
+              << "LuxLoadImageDataFromFileEnhanced cost: "
+              << (double)(clock() - t) / CLOCKS_PER_SEC << " seconds."
+              << std::endl;
 
     std::ifstream fs(filename.c_str(), std::ios_base::binary);
     if (!fs.is_open()) {
@@ -62,18 +54,28 @@ int main( int argc, char ** argv ) {
     unsigned char* BDst = new unsigned char[length / 4];
 
     t = clock();
-    auto ret = LuxGetBayerRawChanenls(src, 2560, 1920, 0, RDst, G1Dst, G2Dst, BDst);
+    auto ret =
+        LuxGetBayerRawChanenls(src, 2560, 1920, 0, RDst, G1Dst, G2Dst, BDst);
     std::cout << "0 is sucessful else failed: " << ret << std::endl;
-    std::cout << __FILE__ << " " << __LINE__ << " -->> Cost: " << (double)(clock() - t) / CLOCKS_PER_SEC << " sec." << std::endl;
+    std::cout << __FILE__ << " " << __LINE__
+              << " -->> Cost: " << (double)(clock() - t) / CLOCKS_PER_SEC
+              << " sec." << std::endl;
 
     t = clock();
-    std::cout << LuxSetChannelFactors(src, 2560, 1920, 0, 1.23, 3.2, 1) << std::endl;
-    std::cout << __FILE__ << " " << __LINE__ << " -->> Cost: " << (double)(clock() - t) / CLOCKS_PER_SEC << " sec." << std::endl;
+    std::cout << LuxSetChannelFactors(src, 2560, 1920, 0, 1.23, 3.2, 1)
+              << std::endl;
+    std::cout << __FILE__ << " " << __LINE__
+              << " -->> Cost: " << (double)(clock() - t) / CLOCKS_PER_SEC
+              << " sec." << std::endl;
 
-    delete [] src; src = nullptr;
-    delete [] RDst; src = nullptr;
-    delete [] G1Dst; src = nullptr;
-    delete [] G2Dst; src = nullptr;
-    delete [] BDst; src = nullptr;
-
+    delete[] src;
+    src = nullptr;
+    delete[] RDst;
+    src = nullptr;
+    delete[] G1Dst;
+    src = nullptr;
+    delete[] G2Dst;
+    src = nullptr;
+    delete[] BDst;
+    src = nullptr;
 }

@@ -6,7 +6,8 @@ SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
 
 add_library(LuxDLL SHARED src/LuxDLL.cc src/LuxCheck.cc)
-set(OpenCV_DIR "F:\\opencv3\\mingw-build\\install\\x64\\mingw")
+# set(OpenCV_DIR "F:\\opencv3\\mingw-build\\install\\x64\\mingw")
+set(OpenCV_DIR "/home/lux/Downloads/opencv-4.7.0/build")
 FIND_PACKAGE(OpenCV REQUIRED)
 if(OpenCV_FOUND)
     include_directories(${OpenCV_INCLUDE_DIRS})
